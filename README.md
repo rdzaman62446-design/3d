@@ -46,6 +46,17 @@ Model axes: X to the right, Y up, Z toward you in the front view.
 
 Each view is cropped to its drawing, so draw every view at the same scale. With **Take width and depth from the drawings** on, only the height needs entering.
 
+### Turnaround sheets
+
+**Split a sheet** takes one image with several views side by side. It finds each figure (labels and dimension text are dropped), then guesses its view from the outline:
+
+- the widest full-height outlines are the front and back (the first one is taken as the front, since their outlines are mirror images);
+- narrow outlines are side views, and the way the feet point decides left or right;
+- outlines in between are treated as 3/4 views and skipped;
+- much shorter outlines are top and bottom views.
+
+Every guess can be changed before the views are used. **Label with Claude** sends the sheet, with each figure numbered, to Claude (`claude-opus-5-5`) and asks for each figure's view. It uses the visitor's own Anthropic API key straight from the browser; a hosted version should make this call from a server so the key stays private. Logic: `src/multiview/sheet-core.js` (tested), `src/multiview/sheet.js`, `src/multiview/ai-label.js`.
+
 ### Limits
 
 Carving only uses outlines, so hollows that never show on an outline (eye sockets, the small of the back) come out filled. The planned AI detail pass would add those on top of the carved shape.

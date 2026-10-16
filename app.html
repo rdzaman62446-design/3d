@@ -99,6 +99,30 @@
     </aside>
 
     <aside class="panel" id="panel-mv" aria-label="Multi-view settings" hidden>
+      <section aria-labelledby="h-sheet">
+        <h2 id="h-sheet">Turnaround sheet</h2>
+        <p class="muted">Have every view side by side in one image? Add it here. Each figure is cut out and labelled for you to check.</p>
+        <div class="row">
+          <label class="btn btn-primary file-btn" for="sheet-file">Split a sheet<input type="file" id="sheet-file" accept="image/*"></label>
+          <button type="button" class="btn" id="sheet-sample">Sample sheet</button>
+        </div>
+        <div id="sheet-review" class="sheet-review" hidden>
+          <p id="sheet-summary"></p>
+          <div class="sheet-figures" id="sheet-figures"></div>
+          <div class="row">
+            <button type="button" class="btn btn-primary" id="sheet-apply">Use these views</button>
+            <button type="button" class="btn" id="sheet-ai">Label with Claude</button>
+            <button type="button" class="btn btn-quiet" id="sheet-cancel">Cancel</button>
+          </div>
+          <details class="ai-settings" id="ai-settings">
+            <summary>Claude labelling settings</summary>
+            <label class="field field-wide" for="ai-key"><span>Anthropic API key</span><input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+            <label class="check"><input type="checkbox" id="ai-remember"> Remember the key in this browser</label>
+            <p class="muted">The sheet is sent straight from your browser to Anthropic using your key, and each labelling costs a few cents. Get a key at console.anthropic.com.</p>
+          </details>
+        </div>
+      </section>
+
       <section>
         <h2>Views</h2>
         <p class="muted">Add any of the six orthographic views. Each drawing is trimmed to the object, so draw every view at the same scale and in the same pose.</p>

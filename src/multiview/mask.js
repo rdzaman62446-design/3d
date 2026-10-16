@@ -26,10 +26,10 @@ export async function loadImage(file) {
   }
 }
 
-function readPixels(source) {
+function readPixels(source, maxSide) {
   const sw = source.width || source.naturalWidth;
   const sh = source.height || source.naturalHeight;
-  const k = Math.min(1, MAX_SIDE / Math.max(sw, sh));
+  const k = Math.min(1, maxSide / Math.max(sw, sh));
   const w = Math.max(1, Math.round(sw * k));
   const h = Math.max(1, Math.round(sh * k));
   const canvas = document.createElement('canvas');
@@ -37,11 +37,20 @@ function readPixels(source) {
   canvas.height = h;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(source, 0, 0, w, h);
-  return { w, h, rgba: ctx.getImageData(0, 0, w, h).data };
+  return { w, h, k, rgba: ctx.getImageData(0, 0, w, h).data };
 }
 
-export function imageToMask(source, { threshold = 0.6, invert = false, fill = true } = {}) {
-  const { w, h, rgba } = readPixels(source);
+export function imageToMask(source, settings = {}) {
+  const { w, h, data } = silhouette(source, settings);
+  const kept = largestComponent(data, w, h);
+  if (!kept) return null;
+  return crop(kept, w, h);
+}
+
+// Solid shapes for the whole image, before any shape is picked out.
+// `scale` maps source pixels to the returned grid.
+export function silhouette(source, { threshold = 0.6, invert = false, fill = true } = {}, maxSide = MAX_SIDE) {
+  const { w, h, k, rgba } = readPixels(source, maxSide);
   const n = w * h;
 
   let transparent = 0;
@@ -107,12 +116,10 @@ export function imageToMask(source, { threshold = 0.6, invert = false, fill = tr
     }
   }
 
-  const kept = largestComponent(solid, w, h);
-  if (!kept) return null;
-  return crop(kept, w, h);
+  return { w, h, data: solid, scale: k };
 }
 
-function largestComponent(data, w, h) {
+export function largestComponent(data, w, h) {
   const n = w * h;
   const label = new Int32Array(n);
   let best = 0;
@@ -142,7 +149,7 @@ function largestComponent(data, w, h) {
   return out;
 }
 
-function crop(data, w, h) {
+export function crop(data, w, h) {
   let x0 = w;
   let y0 = h;
   let x1 = -1;

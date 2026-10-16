@@ -173,6 +173,18 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 .slot-empty { font-size: 0.78rem; color: var(--accent); font-weight: 500; position: relative; }
 .slot-note { font-size: 0.7rem; color: var(--ink-2); line-height: 1.3; }
 
+.sheet-review { display: flex; flex-direction: column; gap: 10px; padding: 10px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--canvas); }
+.sheet-review > p { font-size: 0.82rem; }
+.sheet-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sheet-fig { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sheet-fig canvas { width: 100%; aspect-ratio: 3 / 4; height: auto; object-fit: contain; background: #fff; border: 1px solid var(--rule); border-radius: 4px; }
+.sheet-fig select { width: 100%; font: 0.78rem var(--font-body); padding: 4px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); color: var(--ink); }
+.sheet-fig.is-skip canvas { opacity: 0.45; }
+.sheet-fig .fig-num { font: 500 0.7rem var(--font-mono); color: var(--mark); }
+.sheet-fig .fig-reason { font-size: 0.68rem; color: var(--ink-2); line-height: 1.3; }
+.ai-settings summary { cursor: pointer; font-size: 0.8rem; color: var(--ink-2); }
+.ai-settings[open] { display: flex; flex-direction: column; gap: 8px; }
+.field-wide { grid-template-columns: 1fr; gap: 4px; }
 .warning { font-size: 0.8rem; color: var(--mark); border-left: 2px solid var(--mark); padding-left: 8px; }
 .note-card { border: 1px solid var(--rule); border-radius: var(--radius); padding: 10px 12px; background: var(--paper); display: flex; flex-direction: column; gap: 4px; }
 .note-card strong { font-size: 0.84rem; }

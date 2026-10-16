@@ -1,8 +1,12 @@
 import { VIEW_ORDER } from './carve-core.js';
 import { loadImage, imageToMask, drawMask } from './mask.js';
 import { drawFigureView, figureSize } from './sample-figure.js';
+import { splitSheet, numberedSheet, sampleSheet } from './sheet.js';
+import { VIEW_CHOICES } from './sheet-core.js';
 
-const LABELS = { front: 'Front', back: 'Back', left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom' };
+const AI_KEY = 'draft3d-anthropic-key';
+
+const LABELS = { front: 'Front', back: 'Back', left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom', skip: 'Skip' };
 const NOTES = {
   front: 'Facing you',
   back: 'From behind',
@@ -75,8 +79,156 @@ export class MultiViewPanel {
       for (const v of VIEW_ORDER) this.clearView(v, false);
       this.schedule();
     });
+    this.setupSheet();
     $('mv-threshold').addEventListener('input', () => { $('mv-threshold-out').textContent = `${Math.round($('mv-threshold').value * 100)}%`; });
     $('mv-smoothing').addEventListener('input', () => { $('mv-smoothing-out').textContent = $('mv-smoothing').value; });
+  }
+
+  // ---------- turnaround sheets ----------
+
+  setupSheet() {
+    this.sheet = null;
+    $('sheet-file').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      try {
+        this.openSheet(await loadImage(file), file.name);
+      } catch (err) {
+        this.toast(err.message);
+      }
+    });
+    $('sheet-sample').addEventListener('click', () => this.openSheet(sampleSheet(drawFigureView), 'sample sheet'));
+    $('sheet-cancel').addEventListener('click', () => this.closeSheet());
+    $('sheet-apply').addEventListener('click', () => this.applySheet());
+    $('sheet-ai').addEventListener('click', () => this.labelSheetWithClaude());
+    try {
+      const saved = localStorage.getItem(AI_KEY);
+      if (saved) {
+        $('ai-key').value = saved;
+        $('ai-remember').checked = true;
+      }
+    } catch { /* storage unavailable */ }
+    $('ai-remember').addEventListener('change', () => this.storeKey());
+    $('ai-key').addEventListener('change', () => this.storeKey());
+  }
+
+  storeKey() {
+    try {
+      if ($('ai-remember').checked && $('ai-key').value.trim()) localStorage.setItem(AI_KEY, $('ai-key').value.trim());
+      else localStorage.removeItem(AI_KEY);
+    } catch { /* storage unavailable */ }
+  }
+
+  openSheet(img, name) {
+    const figures = splitSheet(img, this.settings());
+    if (!figures.length) {
+      this.toast(`No figures found in ${name}. Try a higher ink threshold, or turn on Invert for light drawings on dark paper.`);
+      return;
+    }
+    this.sheet = { img, name, figures };
+    this.renderSheet();
+    $('sheet-review').hidden = false;
+    $('sheet-review').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  closeSheet() {
+    this.sheet = null;
+    $('sheet-review').hidden = true;
+    $('sheet-figures').innerHTML = '';
+  }
+
+  renderSheet(message) {
+    const { figures, name } = this.sheet;
+    const used = figures.filter((f) => f.view !== 'skip').length;
+    $('sheet-summary').textContent = message
+      || `Found ${figures.length} figure${figures.length > 1 ? 's' : ''} in ${name}. ${used} will be used. Check each label, then use them.`;
+    const box = $('sheet-figures');
+    box.innerHTML = '';
+    for (const f of figures) {
+      const card = document.createElement('div');
+      card.className = 'sheet-fig';
+      card.classList.toggle('is-skip', f.view === 'skip');
+      const thumb = document.createElement('canvas');
+      thumb.width = 120;
+      thumb.height = 160;
+      const ctx = thumb.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 120, 160);
+      const k = Math.min(112 / f.crop.width, 152 / f.crop.height);
+      ctx.drawImage(f.crop, (120 - f.crop.width * k) / 2, (160 - f.crop.height * k) / 2, f.crop.width * k, f.crop.height * k);
+      const id = `sheet-view-${f.index}`;
+      card.innerHTML = `<span class="fig-num">#${f.index}</span><label class="visually-hidden" for="${id}">View for figure ${f.index}</label>
+        <select id="${id}">${VIEW_CHOICES.map((v) => `<option value="${v}">${LABELS[v]}</option>`).join('')}</select>
+        <span class="fig-reason"></span>`;
+      card.insertBefore(thumb, card.children[1]);
+      const select = card.querySelector('select');
+      select.value = f.view;
+      card.querySelector('.fig-reason').textContent = f.reason;
+      select.addEventListener('change', () => {
+        f.view = select.value;
+        f.reason = 'Set by you.';
+        this.renderSheet();
+      });
+      box.appendChild(card);
+    }
+  }
+
+  applySheet() {
+    const chosen = this.sheet.figures.filter((f) => f.view !== 'skip');
+    if (!chosen.length) {
+      this.toast('Pick a view for at least one figure.');
+      return;
+    }
+    const seen = new Set();
+    for (const f of chosen) {
+      if (seen.has(f.view)) {
+        this.toast(`More than one figure is set to ${LABELS[f.view]}. Each view can be used once.`);
+        return;
+      }
+      seen.add(f.view);
+    }
+    this.sources = {};
+    this.masks = {};
+    for (const f of chosen) this.sources[f.view] = { img: f.crop, name: `${this.sheet.name} #${f.index}` };
+    $('mv-derive').checked = true;
+    this.closeSheet();
+    this.reprocess();
+    this.redrawAll();
+    this.toast(`Using ${chosen.length} views. Enter the character's real height under Real size.`);
+    $('mv-height').focus();
+  }
+
+  async labelSheetWithClaude() {
+    const key = $('ai-key').value.trim();
+    if (!key) {
+      $('ai-settings').open = true;
+      $('ai-key').focus();
+      this.toast('Add your Anthropic API key to label with Claude.');
+      return;
+    }
+    const button = $('sheet-ai');
+    button.disabled = true;
+    button.textContent = 'Asking Claude…';
+    try {
+      const { labelWithClaude } = await import('./ai-label.js');
+      const sheet = numberedSheet(this.sheet.img, this.sheet.figures);
+      const labels = await labelWithClaude(key, sheet, this.sheet.figures.length);
+      let changed = 0;
+      for (const l of labels) {
+        const f = this.sheet.figures.find((x) => x.index === l.index);
+        if (!f) continue;
+        if (f.view !== l.view) changed++;
+        f.view = l.view;
+        f.reason = `Claude: ${l.note}`;
+      }
+      this.renderSheet(`Claude labelled ${labels.length} figure${labels.length > 1 ? 's' : ''} and changed ${changed}. Check them, then use them.`);
+    } catch (err) {
+      this.toast(err.message || 'Claude labelling failed.');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Label with Claude';
+    }
   }
 
   settings() {
