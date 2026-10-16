@@ -1,0 +1,19 @@
+{
+  "name": "draft3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Turn measured 2D drawings into 3D models in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "vite": "5.4.10"
+  }
+}

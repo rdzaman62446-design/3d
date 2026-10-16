@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Draft3D</title>
+  <meta name="description" content="Turn measured 2D drawings into 3D models in your browser. Floor plans become walls, doors and windows. Front, side and top views become a solid you can export.">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="wordmark" href="./index.html">Draft<b>3D</b></a>
+      <nav class="site-nav" aria-label="Sections">
+        <a href="#modes">Modes</a>
+        <a href="#drawings">Drawings</a>
+        <a href="#roadmap">Roadmap</a>
+      </nav>
+      <a class="btn btn-primary" href="./app.html#plan">Open the workbench</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow">Measured drawings to 3D models</p>
+        <h1>Your plans and elevations, built as solid 3D.</h1>
+        <p class="lede">Draw or trace a floor plan with real wall lengths, or upload front, side and top views of an object or figure. Draft3D builds the model in your browser, at the size you drew it, and exports it as STL, OBJ or GLB.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="./app.html#plan">Start a floor plan</a>
+          <a class="btn btn-lg" href="./app.html#multiview">Carve from views</a>
+        </div>
+      </div>
+
+      <figure class="sheet" aria-label="Three orthographic views of a small gabled house and the 3D model built from them">
+        <svg viewBox="0 0 660 420" role="img">
+          <title>Front, top and right views of a gabled house, and the resulting 3D model</title>
+          <defs>
+            <marker id="tick" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <path d="M2 8L8 2" stroke="currentColor" stroke-width="1.4"/>
+            </marker>
+          </defs>
+          <g class="s-proj">
+            <path d="M40 192V162M184 192V162M184 192H214M184 240H214M40 330H24"/>
+          </g>
+          <g class="s-view">
+            <rect x="40" y="54" width="144" height="108"/>
+            <path d="M112 54V162"/>
+            <path d="M40 330H184V240L112 192L40 240Z"/>
+            <path d="M100 330V267H124V330"/>
+            <rect x="214" y="192" width="108" height="138"/>
+            <path d="M214 240H322"/>
+          </g>
+          <g class="s-dim">
+            <path d="M40 354H184M40 346V362M184 346V362" marker-start="url(#tick)" marker-end="url(#tick)"/>
+            <path d="M214 354H322M214 346V362M322 346V362"/>
+            <path d="M346 192V330M338 192H354M338 330H354"/>
+            <path d="M206 54V162M198 54H214M198 162H214"/>
+          </g>
+          <g class="s-text">
+            <text x="112" y="372">4800</text>
+            <text x="268" y="372">3600</text>
+            <text x="356" y="265" text-anchor="start">4600</text>
+            <text x="220" y="112" text-anchor="start">3600</text>
+            <text x="112" y="44" class="s-label">TOP</text>
+            <text x="112" y="186" class="s-label s-onview">FRONT</text>
+            <text x="268" y="186" class="s-label">RIGHT</text>
+          </g>
+
+          <g class="s-arrow"><path d="M372 120h36m-8-6l8 6-8 6"/></g>
+
+          <g class="s-solid">
+            <polygon class="s-ground" points="500.0,229.8 635.1,307.8 527.0,370.2 391.9,292.2"/>
+            <polygon class="s-face-c" points="418.9,214.2 473.0,203.8 554.0,157.0 500.0,167.4"/>
+            <polygon class="s-face-b" points="527.0,354.6 608.1,307.8 608.1,229.8 527.0,276.6"/>
+            <polygon class="s-face-c2" points="473.0,203.8 527.0,276.6 608.1,229.8 554.0,157.0"/>
+            <polygon class="s-face-a" points="418.9,292.2 527.0,354.6 527.0,276.6 473.0,203.8 418.9,214.2"/>
+            <polygon class="s-door" points="464.0,318.2 482.0,328.6 482.0,274.0 464.0,263.6"/>
+          </g>
+
+          <g class="s-block">
+            <rect x="452" y="372" width="196" height="40"/>
+            <path d="M452 392H648M548 372V412"/>
+            <text x="458" y="386">SCALE 1:100</text>
+            <text x="458" y="406">UNITS mm</text>
+            <text x="554" y="386">3RD ANGLE</text>
+            <text x="554" y="406">SHEET 1/1</text>
+            <g class="s-symbol">
+              <circle cx="630" cy="386" r="4"/><circle cx="630" cy="386" r="1.6"/>
+              <path d="M612 382l8 -2v12l-8 -2z"/>
+            </g>
+          </g>
+        </svg>
+      </figure>
+    </section>
+
+    <section class="band" id="modes">
+      <div class="wrap">
+        <h2 class="section-title">Two ways in</h2>
+        <div class="modes-grid">
+          <article class="mode-card">
+            <p class="eyebrow">Floor plan mode</p>
+            <h3>Walls, doors and windows to exact size</h3>
+            <p>Click out walls on a millimetre grid, or type each length. Drop doors and windows onto walls and set their width, height and sill. Have a scanned plan? Put it behind the grid, set the scale from one known dimension and trace over it.</p>
+            <ul class="facts">
+              <li>Angle snapping at 45° and joined corners</li>
+              <li>Wall height and thickness per wall</li>
+              <li>Save and reopen plans as .json</li>
+            </ul>
+            <a class="btn" href="./app.html#plan">Open floor plan mode</a>
+          </article>
+          <article class="mode-card">
+            <p class="eyebrow">Multi-view mode</p>
+            <h3>Front, side and top views carved into a solid</h3>
+            <p>Upload up to six orthographic views: front, back, left, right, top and bottom. Draft3D finds each silhouette and keeps only the shape that matches every view, then smooths it into a mesh at the real size you enter.</p>
+            <ul class="facts">
+              <li>Works for people, products and furniture</li>
+              <li>Fills line drawings and ignores labels</li>
+              <li>Warns when views are drawn at different scales</li>
+            </ul>
+            <a class="btn" href="./app.html#multiview">Open multi-view mode</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap split" id="drawings">
+      <div>
+        <h2 class="section-title">What your drawings need</h2>
+        <p class="muted">Accurate drawings give accurate models. For multi-view carving, every view has to describe the same object in the same way.</p>
+      </div>
+      <ol class="checklist">
+        <li><span><strong>One scale for every view.</strong> The figure is the same height in the front and side views.</span></li>
+        <li><span><strong>Lined up.</strong> Head, shoulders and feet sit at the same level in each view.</span></li>
+        <li><span><strong>One pose.</strong> For people, a T-pose or A-pose keeps arms clear of the body.</span></li>
+        <li><span><strong>Straight-on views.</strong> Orthographic, with no perspective.</span></li>
+        <li><span><strong>A clean background.</strong> Dark lines or fill on light paper, or a transparent PNG.</span></li>
+      </ol>
+    </section>
+
+    <section class="band">
+      <div class="wrap">
+        <h2 class="section-title">Runs on your own device</h2>
+        <div class="stats">
+          <div><p class="stat">100–300 MB</p><p class="muted">Typical memory use, about one busy browser tab. Ultra detail in multi-view mode uses more.</p></div>
+          <div><p class="stat">Seconds</p><p class="muted">Most models build in well under a second on a laptop. Carving runs in the background, so the page stays responsive.</p></div>
+          <div><p class="stat">Nothing uploaded</p><p class="muted">Drawings never leave your browser. A laptop is best for drawing and editing; phones work for viewing and quick checks.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap" id="roadmap">
+      <h2 class="section-title">Roadmap</h2>
+      <ul class="roadmap">
+        <li><span class="chip chip-now">Available</span><div><strong>Floor plans and multi-view carving</strong><p class="muted">Editing, tracing, carving and STL, OBJ and GLB export.</p></div></li>
+        <li><span class="chip">Next</span><div><strong>Accounts and saved projects</strong><p class="muted">Keep projects in the cloud and share a 3D link with a client.</p></div></li>
+        <li><span class="chip">Next</span><div><strong>DXF import</strong><p class="muted">Read walls straight from CAD floor plans.</p></div></li>
+        <li><span class="chip">Planned</span><div><strong>AI detail pass</strong><p class="muted">Adds faces, hollows and folds on top of the carved shape, keeping its measured proportions. Runs on a GPU server.</p></div></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span class="wordmark">Draft<b>3D</b></span>
+      <span class="muted">All dimensions in millimetres.</span>
+    </div>
+  </footer>
+  <script type="module" src="./src/landing.js"></script>
+</body>
+</html>
