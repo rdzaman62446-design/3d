@@ -3,37 +3,68 @@ import { findFigures, guessViews } from './sheet-core.js';
 
 const SHEET_MAX_SIDE = 2400;
 
+// Copies a region of the source, with a little room around it, onto white.
+function cropRegion(source, x, y, w, h, padFrac = 0.04) {
+  const pad = Math.max(w, h) * padFrac + 2;
+  const sx = Math.max(0, x - pad);
+  const sy = Math.max(0, y - pad);
+  const sw = Math.min(source.width - sx, w + pad * 2);
+  const sh = Math.min(source.height - sy, h + pad * 2);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(sw));
+  canvas.height = Math.max(1, Math.round(sh));
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return { canvas, sx, sy, k: canvas.width / sw };
+}
+
 // Splits a turnaround sheet into one cropped image per figure, with a guessed view.
 export function splitSheet(source, settings) {
   const { w, h, data, scale } = silhouette(source, settings, SHEET_MAX_SIDE);
   const figures = findFigures(data, w, h);
   const guesses = guessViews(figures);
   return figures.map((f, i) => {
-    // Crop from the original image, with a little room around the figure.
-    const pad = Math.round(Math.max(f.box.w, f.box.h) * 0.04) + 2;
-    const sx = Math.max(0, (f.box.x - pad) / scale);
-    const sy = Math.max(0, (f.box.y - pad) / scale);
-    const sw = Math.min(source.width - sx, (f.box.w + pad * 2) / scale);
-    const sh = Math.min(source.height - sy, (f.box.h + pad * 2) / scale);
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(sw));
-    canvas.height = Math.max(1, Math.round(sh));
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    return {
-      index: i + 1,
-      crop: canvas,
-      box: { x: f.box.x / scale, y: f.box.y / scale, w: f.box.w / scale, h: f.box.h / scale },
-      view: guesses[i].view,
-      reason: guesses[i].reason,
-    };
+    const box = { x: f.box.x / scale, y: f.box.y / scale, w: f.box.w / scale, h: f.box.h / scale };
+    return { index: i + 1, crop: cropRegion(source, box.x, box.y, box.w, box.h).canvas, box, view: guesses[i].view, reason: guesses[i].reason };
   });
 }
 
-// The sheet with a numbered tag on each figure, for review and for Claude.
-export function numberedSheet(source, figures, maxSide = 1568) {
+// Turns Claude's rough boxes into tight crops: inside each box (slightly
+// enlarged) the biggest drawing is found and the crop is fitted to it.
+export function figuresFromBoxes(source, found, settings) {
+  const W = source.width;
+  const H = source.height;
+  return found.map((f, i) => {
+    let box = { x: f.box.x0 * W, y: f.box.y0 * H, w: (f.box.x1 - f.box.x0) * W, h: (f.box.y1 - f.box.y0) * H };
+    const region = cropRegion(source, box.x, box.y, box.w, box.h, 0.06);
+    const sil = silhouette(region.canvas, settings, 1024);
+    const shapes = findFigures(sil.data, sil.w, sil.h);
+    if (shapes.length) {
+      const main = shapes.reduce((a, b) => (b.area > a.area ? b : a));
+      const k = sil.scale * region.k;
+      box = { x: region.sx + main.box.x / k, y: region.sy + main.box.y / k, w: main.box.w / k, h: main.box.h / k };
+    }
+    return { index: i + 1, crop: cropRegion(source, box.x, box.y, box.w, box.h).canvas, box, view: f.view, reason: `Claude: ${f.note}` };
+  });
+}
+
+// The source scaled down for sending to Claude.
+export function scaledCopy(source, maxSide = 1568) {
+  const k = Math.min(1, maxSide / Math.max(source.width, source.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(source.width * k);
+  canvas.height = Math.round(source.height * k);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+// The sheet with a numbered box around each figure, for review.
+export function numberedSheet(source, figures, maxSide = 900) {
   const k = Math.min(1, maxSide / Math.max(source.width, source.height));
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(source.width * k);

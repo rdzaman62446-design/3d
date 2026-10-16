@@ -1,7 +1,7 @@
 import { VIEW_ORDER } from './carve-core.js';
 import { loadImage, imageToMask, drawMask } from './mask.js';
 import { drawFigureView, figureSize } from './sample-figure.js';
-import { splitSheet, numberedSheet, sampleSheet } from './sheet.js';
+import { splitSheet, figuresFromBoxes, numberedSheet, sampleSheet, scaledCopy } from './sheet.js';
 import { VIEW_CHOICES } from './sheet-core.js';
 
 const AI_KEY = 'draft3d-anthropic-key';
@@ -71,7 +71,7 @@ export class MultiViewPanel {
       this.slots[view] = slot;
     }
 
-    for (const id of ['mv-threshold', 'mv-invert', 'mv-fill']) $(id).addEventListener('input', () => this.reprocess());
+    for (const id of ['mv-threshold', 'mv-invert', 'mv-fill', 'mv-mode']) $(id).addEventListener('input', () => this.reprocess());
     for (const id of ['mv-height', 'mv-width', 'mv-depth', 'mv-resolution', 'mv-smoothing']) $(id).addEventListener('input', () => this.schedule());
     $('mv-derive').addEventListener('change', () => this.schedule());
     $('mv-sample').addEventListener('click', () => this.loadSample());
@@ -101,14 +101,21 @@ export class MultiViewPanel {
     $('sheet-sample').addEventListener('click', () => this.openSheet(sampleSheet(drawFigureView), 'sample sheet'));
     $('sheet-cancel').addEventListener('click', () => this.closeSheet());
     $('sheet-apply').addEventListener('click', () => this.applySheet());
-    $('sheet-ai').addEventListener('click', () => this.labelSheetWithClaude());
+    $('sheet-ai').addEventListener('click', () => this.findWithClaude());
     try {
       const saved = localStorage.getItem(AI_KEY);
       if (saved) {
         $('ai-key').value = saved;
         $('ai-remember').checked = true;
+        $('sheet-use-ai').checked = true;
       }
     } catch { /* storage unavailable */ }
+    $('sheet-use-ai').addEventListener('change', (e) => {
+      if (e.target.checked && !$('ai-key').value.trim()) {
+        $('ai-settings').open = true;
+        $('ai-key').focus();
+      }
+    });
     $('ai-remember').addEventListener('change', () => this.storeKey());
     $('ai-key').addEventListener('change', () => this.storeKey());
   }
@@ -121,13 +128,23 @@ export class MultiViewPanel {
   }
 
   openSheet(img, name) {
-    const figures = splitSheet(img, this.settings());
-    if (!figures.length) {
-      this.toast(`No figures found in ${name}. Try a higher ink threshold, or turn on Invert for light drawings on dark paper.`);
+    this.sheet = { img, name, figures: [] };
+    if ($('sheet-use-ai').checked && $('ai-key').value.trim()) {
+      this.findWithClaude();
       return;
     }
-    this.sheet = { img, name, figures };
-    this.renderSheet();
+    const figures = splitSheet(img, this.settings());
+    if (!figures.length) {
+      this.sheet = null;
+      this.toast(`No figures found in ${name}. Try finding them with Claude, or change the detection settings below.`);
+      return;
+    }
+    this.sheet.figures = figures;
+    this.showReview();
+  }
+
+  showReview(message) {
+    this.renderSheet(message);
     $('sheet-review').hidden = false;
     $('sheet-review').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
@@ -139,7 +156,12 @@ export class MultiViewPanel {
   }
 
   renderSheet(message) {
-    const { figures, name } = this.sheet;
+    const { figures, name, img } = this.sheet;
+    const overview = numberedSheet(img, figures);
+    const out = $('sheet-overview');
+    out.width = overview.width;
+    out.height = overview.height;
+    out.getContext('2d').drawImage(overview, 0, 0);
     const used = figures.filter((f) => f.view !== 'skip').length;
     $('sheet-summary').textContent = message
       || `Found ${figures.length} figure${figures.length > 1 ? 's' : ''} in ${name}. ${used} will be used. Check each label, then use them.`;
@@ -199,35 +221,31 @@ export class MultiViewPanel {
     $('mv-height').focus();
   }
 
-  async labelSheetWithClaude() {
+  async findWithClaude() {
+    if (!this.sheet) return;
     const key = $('ai-key').value.trim();
     if (!key) {
       $('ai-settings').open = true;
       $('ai-key').focus();
-      this.toast('Add your Anthropic API key to label with Claude.');
+      this.toast('Add your Anthropic API key to find views with Claude.');
       return;
     }
     const button = $('sheet-ai');
     button.disabled = true;
-    button.textContent = 'Asking Claude…';
+    $('sheet-busy').hidden = false;
     try {
-      const { labelWithClaude } = await import('./ai-label.js');
-      const sheet = numberedSheet(this.sheet.img, this.sheet.figures);
-      const labels = await labelWithClaude(key, sheet, this.sheet.figures.length);
-      let changed = 0;
-      for (const l of labels) {
-        const f = this.sheet.figures.find((x) => x.index === l.index);
-        if (!f) continue;
-        if (f.view !== l.view) changed++;
-        f.view = l.view;
-        f.reason = `Claude: ${l.note}`;
-      }
-      this.renderSheet(`Claude labelled ${labels.length} figure${labels.length > 1 ? 's' : ''} and changed ${changed}. Check them, then use them.`);
+      const { detectWithClaude } = await import('./ai-detect.js');
+      const found = await detectWithClaude(key, scaledCopy(this.sheet.img));
+      if (!found.length) throw new Error('Claude found no full-body drawings on this sheet.');
+      this.sheet.figures = figuresFromBoxes(this.sheet.img, found, this.settings());
+      const used = this.sheet.figures.filter((f) => f.view !== 'skip').length;
+      this.showReview(`Claude found ${found.length} drawing${found.length > 1 ? 's' : ''} and named ${used} usable view${used === 1 ? '' : 's'}. Check the boxes and labels, then use them.`);
     } catch (err) {
-      this.toast(err.message || 'Claude labelling failed.');
+      this.toast(err.message || 'Claude could not read the sheet.');
+      if (!this.sheet.figures.length) this.sheet = null;
     } finally {
       button.disabled = false;
-      button.textContent = 'Label with Claude';
+      $('sheet-busy').hidden = true;
     }
   }
 
@@ -236,6 +254,7 @@ export class MultiViewPanel {
       threshold: Number($('mv-threshold').value),
       invert: $('mv-invert').checked,
       fill: $('mv-fill').checked,
+      mode: $('mv-mode').value,
     };
   }
 

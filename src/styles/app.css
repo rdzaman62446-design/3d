@@ -175,6 +175,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 
 .sheet-review { display: flex; flex-direction: column; gap: 10px; padding: 10px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--canvas); }
 .sheet-review > p { font-size: 0.82rem; }
+.sheet-overview { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 4px; background: #fff; }
 .sheet-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sheet-fig { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .sheet-fig canvas { width: 100%; aspect-ratio: 3 / 4; height: auto; object-fit: contain; background: #fff; border: 1px solid var(--rule); border-radius: 4px; }

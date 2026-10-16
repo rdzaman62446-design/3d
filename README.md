@@ -55,7 +55,11 @@ Each view is cropped to its drawing, so draw every view at the same scale. With 
 - outlines in between are treated as 3/4 views and skipped;
 - much shorter outlines are top and bottom views.
 
-Every guess can be changed before the views are used. **Label with Claude** sends the sheet, with each figure numbered, to Claude (`claude-opus-5-5`) and asks for each figure's view. It uses the visitor's own Anthropic API key straight from the browser; a hosted version should make this call from a server so the key stays private. Logic: `src/multiview/sheet-core.js` (tested), `src/multiview/sheet.js`, `src/multiview/ai-label.js`.
+Every guess can be changed before the views are used.
+
+**Find and name the views with Claude** sends the sheet to Claude (`claude-opus-5-5`), which finds every full-body drawing, gives a box around it and names its view, telling front from back and left from right by the face and body rather than the outline. Inside each box the app then finds the drawing itself and crops tightly to it, so rough boxes are fine. This uses the visitor's own Anthropic API key straight from the browser; a hosted version should make the call from a server so the key stays private. Logic: `src/multiview/sheet-core.js` (tested), `src/multiview/sheet.js`, `src/multiview/ai-detect.js`.
+
+Drawings are separated from the paper by **paper colour** (anything that differs from the colour around the image edge, which handles pale colours) or by **dark ink**.
 
 ### Limits
 

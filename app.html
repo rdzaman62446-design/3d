@@ -106,20 +106,23 @@
           <label class="btn btn-primary file-btn" for="sheet-file">Split a sheet<input type="file" id="sheet-file" accept="image/*"></label>
           <button type="button" class="btn" id="sheet-sample">Sample sheet</button>
         </div>
+        <label class="check"><input type="checkbox" id="sheet-use-ai"> Find and name the views with Claude</label>
+        <details class="ai-settings" id="ai-settings">
+          <summary>Claude settings</summary>
+          <label class="field field-wide" for="ai-key"><span>Anthropic API key</span><input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+          <label class="check"><input type="checkbox" id="ai-remember"> Remember the key in this browser</label>
+          <p class="muted">Claude looks at the whole sheet, finds each drawing and says which view it is. The sheet goes straight from your browser to Anthropic using your key; each sheet costs a few cents. Get a key at console.anthropic.com.</p>
+        </details>
+        <p class="muted" id="sheet-busy" hidden>Claude is reading the sheet. This usually takes 10 to 30 seconds.</p>
         <div id="sheet-review" class="sheet-review" hidden>
           <p id="sheet-summary"></p>
+          <canvas id="sheet-overview" class="sheet-overview" aria-label="The sheet with each found figure numbered"></canvas>
           <div class="sheet-figures" id="sheet-figures"></div>
           <div class="row">
             <button type="button" class="btn btn-primary" id="sheet-apply">Use these views</button>
-            <button type="button" class="btn" id="sheet-ai">Label with Claude</button>
+            <button type="button" class="btn" id="sheet-ai">Find with Claude</button>
             <button type="button" class="btn btn-quiet" id="sheet-cancel">Cancel</button>
           </div>
-          <details class="ai-settings" id="ai-settings">
-            <summary>Claude labelling settings</summary>
-            <label class="field field-wide" for="ai-key"><span>Anthropic API key</span><input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
-            <label class="check"><input type="checkbox" id="ai-remember"> Remember the key in this browser</label>
-            <p class="muted">The sheet is sent straight from your browser to Anthropic using your key, and each labelling costs a few cents. Get a key at console.anthropic.com.</p>
-          </details>
         </div>
       </section>
 
@@ -144,9 +147,12 @@
 
       <section aria-labelledby="h-detect">
         <h2 id="h-detect">Silhouette detection</h2>
-        <label class="range" for="mv-threshold">Ink threshold <output id="mv-threshold-out">60%</output><input type="range" id="mv-threshold" min="0.1" max="0.95" step="0.01" value="0.6"></label>
+        <label class="range" for="mv-threshold">Sensitivity <output id="mv-threshold-out">60%</output><input type="range" id="mv-threshold" min="0.1" max="0.95" step="0.01" value="0.6"></label>
+        <label class="field" for="mv-mode"><span>Find the drawing by</span>
+          <select id="mv-mode"><option value="background" selected>Paper colour</option><option value="ink">Dark ink</option></select>
+        </label>
         <label class="check"><input type="checkbox" id="mv-fill" checked> Fill closed outlines</label>
-        <label class="check"><input type="checkbox" id="mv-invert"> Invert (light drawing on dark paper)</label>
+        <label class="check"><input type="checkbox" id="mv-invert"> Invert (dark-ink mode, light drawing on dark paper)</label>
         <p class="muted">Labels and dimension lines that don't touch the object are ignored. Transparent PNGs use their transparency.</p>
       </section>
 

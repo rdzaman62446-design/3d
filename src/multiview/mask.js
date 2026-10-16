@@ -49,7 +49,7 @@ export function imageToMask(source, settings = {}) {
 
 // Solid shapes for the whole image, before any shape is picked out.
 // `scale` maps source pixels to the returned grid.
-export function silhouette(source, { threshold = 0.6, invert = false, fill = true } = {}, maxSide = MAX_SIDE) {
+export function silhouette(source, { threshold = 0.6, invert = false, fill = true, mode = 'background' } = {}, maxSide = MAX_SIDE) {
   const { w, h, k, rgba } = readPixels(source, maxSide);
   const n = w * h;
 
@@ -57,17 +57,23 @@ export function silhouette(source, { threshold = 0.6, invert = false, fill = tru
   for (let i = 0; i < n; i++) if (rgba[i * 4 + 3] < 128) transparent++;
   const useAlpha = transparent > n * 0.02;
 
-  const ink = new Uint8Array(n);
+  // "background": anything that differs enough from the paper colour, read
+  // from the image border. Catches pale colours that a darkness test misses.
+  // "ink": anything darker than the threshold.
+  const bg = mode === 'background' ? borderColour(rgba, w, h) : null;
+  const tol = (1 - threshold) * 100;
+  const tol2 = tol * tol;
   const cut = threshold * 255;
+  const ink = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const r = rgba[i * 4];
     const g = rgba[i * 4 + 1];
     const b = rgba[i * 4 + 2];
-    const a = rgba[i * 4 + 3];
     let on;
-    if (useAlpha) on = a >= 128;
+    if (useAlpha) on = rgba[i * 4 + 3] >= 128;
+    else if (bg) on = (r - bg[0]) ** 2 + (g - bg[1]) ** 2 + (b - bg[2]) ** 2 > tol2;
     else on = 0.2126 * r + 0.7152 * g + 0.0722 * b < cut;
-    if (invert && !useAlpha) on = !on;
+    if (invert && !useAlpha && !bg) on = !on;
     ink[i] = on ? 1 : 0;
   }
 
@@ -117,6 +123,19 @@ export function silhouette(source, { threshold = 0.6, invert = false, fill = tru
   }
 
   return { w, h, data: solid, scale: k };
+}
+
+// Median colour of the pixels along the image edge.
+function borderColour(rgba, w, h) {
+  const ch = [[], [], []];
+  const add = (x, y) => {
+    const i = (y * w + x) * 4;
+    for (let c = 0; c < 3; c++) ch[c].push(rgba[i + c]);
+  };
+  const step = Math.max(1, Math.floor((w + h) / 400));
+  for (let x = 0; x < w; x += step) { add(x, 0); add(x, h - 1); }
+  for (let y = 0; y < h; y += step) { add(0, y); add(w - 1, y); }
+  return ch.map((v) => v.sort((a, b) => a - b)[v.length >> 1]);
 }
 
 export function largestComponent(data, w, h) {
